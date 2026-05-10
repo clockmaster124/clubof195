@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Country Counter - Chess.com Club</title>
+<meta charset="UTF-8">
+
+<style>
+html{
+overflow-x:hidden;
+width:100%;
+}
+
+body{
+font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+text-align:center;
+padding:20px 10px;
+min-height:100vh;
+margin:0;
+overflow-x:hidden;
+width:100%;
+max-width:100vw;
+box-sizing:border-box;
+}
+
+h1{
+color:white;
+font-size:32px;
+margin-bottom:30px;
+text-shadow:2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.dashboard{
+background:white;
+width:450px;
+max-width:90%;
+margin:auto;
+padding:30px;
+border-radius:16px;
+box-shadow:0 10px 40px rgba(0,0,0,0.3);
+}
+
+.stat{
+font-size:28px;
+margin:20px 0;
+padding:20px;
+background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+color:white;
+border-radius:12px;
+}
+
+.stat b{
+font-size:36px;
+display:block;
+margin-top:5px;
+}
+
+.progress{
+margin:20px 0;
+font-size:14px;
+color:#666;
+}
+
+.progress-bar{
+width:100%;
+height:8px;
+background:#e0e0e0;
+border-radius:4px;
+overflow:hidden;
+margin:10px 0;
+}
+
+.progress-fill{
+height:100%;
+background:linear-gradient(90deg,#667eea,#764ba2);
+transition:width 0.3s;
+}
+
+.countryList{
+margin-top:25px;
+text-align:left;
+max-height:500px;
+overflow-y:auto;
+border-top:2px solid #e0e0e0;
+padding-top:15px;
+}
+
+.country{
+padding:12px;
+font-size:16px;
+border-bottom:1px solid #f0f0f0;
+display:flex;
+justify-content:space-between;
+}
+
+.country-count{
+background:linear-gradient(135deg,#667eea,#764ba2);
+color:white;
+padding:6px 14px;
+border-radius:20px;
+font-weight:bold;
+}
+
+.error{
+color:red;
+padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🌍 The Club Of 195 Country - Counter</h1>
+
+<div class="dashboard">
+
+<div class="stat">
+🌎 Countries
+<b id="countries">0</b>
+</div>
+
+<div class="progress">
+<div id="status">Loading...</div>
+<div class="progress-bar">
+<div id="progressFill" class="progress-fill" style="width:0%"></div>
+</div>
+</div>
+
+<div id="error" class="error" style="display:none;"></div>
+
+<div class="countryList" id="countryList"></div>
+
+</div>
+
+<script>
+
+const club =
+"https://api.chess.com/pub/club/the-club-of-195-countries/members";
+
+/* small country map (same as yours, unchanged idea) */
+const countryInfo = {
+US:"United States",IN:"India",GB:"United Kingdom",CA:"Canada",
+DE:"Germany",FR:"France",JP:"Japan",CN:"China"
+};
+
+function getCountryName(code){
+return countryInfo[code] || code;
+}
+
+function setStatus(msg,p){
+document.getElementById("status").textContent = msg;
+document.getElementById("progressFill").style.width = p + "%";
+}
+
+function error(msg){
+document.getElementById("error").style.display="block";
+document.getElementById("error").textContent=msg;
+}
+
+async function load(){
+
+try{
+
+setStatus("Loading members...",10);
+
+const res = await fetch(club);
+const data = await res.json();
+
+/* FIX: correct structure of Chess.com members API */
+const users = [
+...(data.weekly||[]),
+...(data.monthly||[]),
+...(data.all_time||[])
+].map(u => u.username);
+
+setStatus("Processing "+users.length+" users...",30);
+
+const countryData = {};
+
+for(let i=0;i<users.length;i++){
+
+try{
+
+const r = await fetch(
+`https://api.chess.com/pub/player/${users[i]}`
+);
+
+const p = await r.json();
+
+if(p.country){
+const code = p.country.split("/").pop().toUpperCase();
+countryData[code] = (countryData[code]||0)+1;
+}
+
+}catch(e){}
+
+setStatus(
+`Processing ${i+1}/${users.length}`,
+30 + (i/users.length)*60
+);
+
+}
+
+setStatus("Done",100);
+
+/* render */
+const sorted = Object.entries(countryData)
+.sort((a,b)=>b[1]-a[1]);
+
+document.getElementById("countries").textContent = sorted.length;
+
+const list = document.getElementById("countryList");
+list.innerHTML="";
+
+sorted.forEach(([code,count])=>{
+
+const div = document.createElement("div");
+div.className="country";
+
+div.innerHTML=`
+<span>${getCountryName(code)}</span>
+<span class="country-count">${count}</span>
+`;
+
+list.appendChild(div);
+
+});
+
+}catch(err){
+error(err.message);
+console.log(err);
+}
+
+}
+
+load();
+
+</script>
+
+</body>
+</html>
