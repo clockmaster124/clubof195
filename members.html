@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        html, body {
+            background: transparent !important;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+        }
+
+        .vortex-card {
+            width: 227px;
+            background: linear-gradient(165deg, #0a0e1a 0%, #1a1420 50%, #120a1a 100%);
+            border-radius: 20px;
+            box-shadow:
+                0 0 40px rgba(138, 43, 226, 0.2),
+                0 0 80px rgba(75, 0, 130, 0.15),
+                inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(138, 43, 226, 0.4);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header-section {
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+        }
+
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8a2be2, #9370db);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .header-text {
+            font-size: 13px;
+            font-weight: bold;
+            color: #e0d0ff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #list {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .member-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 14px;
+            background: rgba(138, 43, 226, 0.05);
+            border: 1px solid rgba(138, 43, 226, 0.2);
+            transition: 0.3s;
+        }
+
+        .member-box:hover {
+            transform: translateY(-2px);
+            background: rgba(138, 43, 226, 0.12);
+        }
+
+        .rank-number {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+            background: rgba(138, 43, 226, 0.3);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 2px solid rgba(138, 43, 226, 0.4);
+        }
+
+        .info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .name {
+            color: #e0d0ff;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .time {
+            font-size: 10px;
+            color: rgba(147, 112, 219, 0.7);
+        }
+
+        .loading {
+            text-align: center;
+            color: rgba(147, 112, 219, 0.6);
+            font-size: 11px;
+            padding: 20px;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
+</head>
+
+<body>
+<div class="vortex-card">
+
+    <div class="header-section">
+        <div class="header-icon">⚡</div>
+        <div class="header-text">New Members</div>
+    </div>
+
+    <div id="list">
+        <div class="loading">Loading members...</div>
+    </div>
+
+</div>
+
+<script>
+function timeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+
+    let interval = Math.floor(seconds / 31536000);
+    if (interval >= 1) return interval + "y ago";
+
+    interval = Math.floor(seconds / 2592000);
+    if (interval >= 1) return interval + "mo ago";
+
+    interval = Math.floor(seconds / 86400);
+    if (interval >= 1) return interval + "d ago";
+
+    interval = Math.floor(seconds / 3600);
+    if (interval >= 1) return interval + "h ago";
+
+    interval = Math.floor(seconds / 60);
+    if (interval >= 1) return interval + "m ago";
+
+    return "just now";
+}
+
+async function load() {
+    const list = document.getElementById("list");
+    const defaultAvatar =
+        "https://www.chess.com/bundles/web/images/user-image.007dad08.svg";
+
+    try {
+        const res = await fetch(
+            "https://api.chess.com/pub/club/the-club-of-195-countries/members"
+        );
+
+        const data = await res.json();
+
+        const all = [
+            ...(data.weekly || []),
+            ...(data.monthly || []),
+            ...(data.all_time || [])
+        ];
+
+        const top3 = all
+            .sort((a, b) => b.joined - a.joined)
+            .slice(0, 3);
+
+        const members = await Promise.all(
+            top3.map(async (m) => {
+                try {
+                    const r = await fetch(
+                        `https://api.chess.com/pub/player/${m.username}`
+                    );
+                    const p = await r.json();
+
+                    return {
+                        username: m.username,
+                        avatar: p.avatar || defaultAvatar,
+                        joined: m.joined
+                    };
+                } catch {
+                    return {
+                        username: m.username,
+                        avatar: defaultAvatar,
+                        joined: m.joined
+                    };
+                }
+            })
+        );
+
+        list.innerHTML = "";
+
+        members.forEach((m, i) => {
+            const date = new Date(m.joined * 1000);
+
+            list.innerHTML += `
+                <a href="https://www.chess.com/member/${m.username}" target="_blank">
+                    <div class="member-box">
+
+                        <div class="rank-number">${i + 1}</div>
+
+                        <img src="${m.avatar}" class="avatar"
+                             onerror="this.src='${defaultAvatar}'">
+
+                        <div class="info">
+                            <div class="name">${m.username}</div>
+                            <div class="time">${timeAgo(date)}</div>
+                        </div>
+
+                    </div>
+                </a>
+            `;
+        });
+
+    } catch (err) {
+        console.error(err);
+        list.innerHTML = "<div class='loading'>Failed to load members</div>";
+    }
+}
+
+load();
+</script>
+
+</body>
+</html>
