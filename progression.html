@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            margin: 0;
+            background: transparent;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+        }
+
+        .vortex-container {
+            width: 180px;
+            padding: 16px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5),
+                        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(233, 69, 96, 0.25);
+        }
+
+        .icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #e94560 0%, #ff6b9d 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+        }
+
+        .title {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.55);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e94560, #ff6b9d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .progress-section {
+            margin-bottom: 12px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .progress-label {
+            font-size: 10px;
+            color: rgba(255,255,255,0.65);
+        }
+
+        .percentage {
+            font-size: 18px;
+            font-weight: 800;
+            color: #e94560;
+        }
+
+        .progress-track {
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #e94560, #ff6b9d);
+            transition: width 1.5s ease;
+        }
+
+        .milestone-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+        }
+
+        .marker {
+            font-size: 8px;
+            color: rgba(255,255,255,0.45);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="vortex-container">
+
+        <div class="header">
+            <div class="icon">🎯</div>
+            <div class="title">Club Progress</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Current</div>
+                <div class="stat-value" id="current-count">...</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Goal</div>
+                <div class="stat-value">250</div>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-header">
+                <span class="progress-label">Progress</span>
+                <span class="percentage" id="percentage">0%</span>
+            </div>
+
+            <div class="progress-track">
+                <div id="progress-bar" class="progress-fill"></div>
+            </div>
+
+            <div class="milestone-markers">
+                <span class="marker">0</span>
+                <span class="marker">62</span>
+                <span class="marker">125</span>
+                <span class="marker">187</span>
+                <span class="marker">250</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function updateVortexProgress() {
+            const clubSlug = "the-club-of-195-countries";
+            const goal = 250;
+
+            const currentCountEl = document.getElementById("current-count");
+            const progressBarEl = document.getElementById("progress-bar");
+            const percentageEl = document.getElementById("percentage");
+
+            try {
+                const response = await fetch(
+                    `https://api.chess.com/pub/club/${clubSlug}`
+                );
+
+                if (!response.ok) throw new Error("API Error");
+
+                const data = await response.json();
+                const count = data.members_count || 0;
+
+                currentCountEl.innerText = count.toLocaleString();
+
+                let percentage = (count / goal) * 100;
+                percentage = Math.max(0, Math.min(percentage, 100));
+
+                percentageEl.innerText = Math.round(percentage) + "%";
+                progressBarEl.style.width = percentage + "%";
+
+            } catch (err) {
+                console.error("Failed to load member count:", err);
+                currentCountEl.innerText = "?";
+                percentageEl.innerText = "-%";
+                progressBarEl.style.width = "0%";
+            }
+        }
+
+        updateVortexProgress();
+        setInterval(updateVortexProgress, 300000);
+    </script>
+
+</body>
+</html>
