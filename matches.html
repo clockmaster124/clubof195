@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Club Feed</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:transparent;
+    font-family:Inter,Segoe UI,sans-serif;
+    overflow:hidden;
+}
+
+/* 🌌 MAIN PANEL */
+.widget{
+    width:255px;
+    min-height:300px;
+    padding:14px;
+    border-radius:28px;
+    position:relative;
+    overflow:hidden;
+
+    background:
+    radial-gradient(circle at top left, rgba(0,210,255,.16), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(110,0,255,.12), transparent 40%),
+    linear-gradient(180deg, rgba(10,14,28,.98), rgba(3,5,12,1));
+
+    border:1px solid rgba(90,180,255,.16);
+
+    box-shadow:
+    0 0 35px rgba(0,140,255,.12),
+    inset 0 0 20px rgba(255,255,255,.02);
+}
+
+/* HEADER */
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+}
+
+.title{
+    color:white;
+    font-size:18px;
+    font-weight:900;
+    text-shadow:0 0 14px rgba(0,255,255,.55);
+}
+
+.status{
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#00e5ff;
+    box-shadow:0 0 10px #00e5ff;
+    animation:pulse 1.7s infinite;
+}
+
+@keyframes pulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.5);opacity:.5;}
+}
+
+.status span{
+    color:#8fefff;
+    font-size:10px;
+    font-weight:700;
+}
+
+/* FEED */
+#feed{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.feed-link{
+    text-decoration:none;
+    color:inherit;
+}
+
+/* CARD */
+.card{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:11px;
+    border-radius:18px;
+    background:linear-gradient(145deg, rgba(18,26,45,.95), rgba(7,10,18,.98));
+    border:1px solid rgba(0,180,255,.12);
+}
+
+.icon{
+    width:44px;
+    height:44px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    background:rgba(0,200,255,.15);
+}
+
+.info{
+    overflow:hidden;
+}
+
+.name{
+    color:#7fe4ff;
+    font-size:12px;
+    font-weight:800;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.time{
+    color:white;
+    margin-top:4px;
+    font-size:11px;
+}
+
+.tag{
+    margin-left:auto;
+    padding:4px 7px;
+    border-radius:999px;
+    font-size:9px;
+    font-weight:800;
+    color:white;
+}
+
+.match{background:linear-gradient(180deg,#00aaff,#0055aa);}
+.vc{background:linear-gradient(180deg,#ff5555,#990000);}
+.arena{background:linear-gradient(180deg,#ffb400,#aa7700);}
+
+.loading{
+    text-align:center;
+    color:#dff6ff;
+    font-size:12px;
+    margin-top:45px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="widget">
+
+    <div class="header">
+        <div class="title">Club Feed</div>
+
+        <div class="status">
+            <div class="dot"></div>
+            <span>ONLINE</span>
+        </div>
+    </div>
+
+    <div id="feed">
+        <div class="loading">Loading activities...</div>
+    </div>
+
+</div>
+
+<script>
+
+const clubUrl =
+"https://api.chess.com/pub/club/the-club-of-195-countries/matches";
+
+const vcEvents = [
+    { title:"Night VC Chill", time:"Today • 9:00 PM", url:"https://discord.com" },
+    { title:"Strategy VC", time:"Tomorrow • 7:30 PM", url:"https://discord.com" }
+];
+
+const arenas = [
+    { title:"Bullet Arena", time:"Today • 8:00 PM", url:"https://www.chess.com" },
+    { title:"Rapid Arena", time:"May 11 • 6:30 PM", url:"https://www.chess.com" }
+];
+
+const feedEl = document.getElementById("feed");
+
+function formatDate(ts){
+    const d = new Date(ts * 1000);
+    return `${d.toLocaleString("en-US",{month:"short"})} ${d.getDate()}`;
+}
+
+function capitalize(str){
+    if(!str) return "";
+    return str.replace(/-/g," ")
+    .split(" ")
+    .map(w => w.charAt(0).toUpperCase()+w.slice(1))
+    .join(" ");
+}
+
+function createCard(icon,name,time,tag,cls,url="#"){
+    return `
+    <a class="feed-link" href="${url}" target="_blank">
+        <div class="card">
+            <div class="icon">${icon}</div>
+
+            <div class="info">
+                <div class="name">${name}</div>
+                <div class="time">${time}</div>
+            </div>
+
+            <div class="tag ${cls}">${tag}</div>
+        </div>
+    </a>`;
+}
+
+async function loadFeed(){
+
+    let html = "";
+
+    try{
+        const res = await fetch(clubUrl);
+        const data = await res.json();
+
+        const matches = (data.matches || [])
+        .slice(0,3);
+
+        matches.forEach(m => {
+
+            const opponent =
+                capitalize(m.opponent?.split("/").pop() || "Unknown");
+
+            const id = m.url?.split("/").pop() || "#";
+
+            html += createCard(
+                "♟️",
+                `vs ${opponent}`,
+                formatDate(m.start_time || Date.now()/1000),
+                "MATCH",
+                "match",
+                `https://www.chess.com/club/matches/${id}`
+            );
+        });
+
+    } catch(err){
+        html += createCard("⚠️","API Error","Failed to load","ERROR","vc","#");
+    }
+
+    vcEvents.forEach(e=>{
+        html += createCard("🎤",e.title,e.time,"VC","vc",e.url);
+    });
+
+    arenas.forEach(a=>{
+        html += createCard("🏆",a.title,a.time,"ARENA","arena",a.url);
+    });
+
+    feedEl.innerHTML = html;
+}
+
+loadFeed();
+setInterval(loadFeed,300000);
+
+</script>
+
+</body>
+</html>
